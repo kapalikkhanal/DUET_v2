@@ -1,0 +1,269 @@
+{
+ "0.03": {
+  "robots": 32,
+  "falls": 6.0,
+  "falls_per_robot_min": 0.28125,
+  "falls_on_cake": 1.0,
+  "segments": [
+   {
+    "segment": "stand",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.5249140318483114,
+    "falls": 0.0
+   },
+   {
+    "segment": "forward 0.4",
+    "speed": 0.9530055522918701,
+    "apex_cm": 5.675619840621948,
+    "toe_in_share": 0.15800416469573975,
+    "sinkage_cm": 1.0514693334698677,
+    "falls": 0.0
+   },
+   {
+    "segment": "turn 0.6",
+    "speed": 0.7996766567230225,
+    "apex_cm": 5.0293512642383575,
+    "toe_in_share": 0.14898785948753357,
+    "sinkage_cm": 1.2417353689670563,
+    "falls": 1.0
+   },
+   {
+    "segment": "backward 0.3",
+    "speed": 0.9078532457351685,
+    "apex_cm": 4.826195538043976,
+    "toe_in_share": 0.12826837599277496,
+    "sinkage_cm": 1.2857998721301556,
+    "falls": 3.0
+   },
+   {
+    "segment": "sideways 0.25",
+    "speed": 0.6532615423202515,
+    "apex_cm": 4.876887425780296,
+    "toe_in_share": 0.14135801792144775,
+    "sinkage_cm": 1.1966189369559288,
+    "falls": 1.0
+   },
+   {
+    "segment": "stand",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.7246881257742643,
+    "falls": 0.0
+   },
+   {
+    "segment": "squat 0.25",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.6900216452777386,
+    "falls": 0.0
+   },
+   {
+    "segment": "squat 0.25 arms wide",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.7556610740721226,
+    "falls": 0.0
+   },
+   {
+    "segment": "stand up",
+    "speed": NaN,
+    "apex_cm": 5.431689694523811,
+    "toe_in_share": 0.2542372941970825,
+    "sinkage_cm": 0.8361523039638996,
+    "falls": 0.0
+   },
+   {
+    "segment": "forward 0.5",
+    "speed": 0.9133260250091553,
+    "apex_cm": 5.964607000350952,
+    "toe_in_share": 0.15271924436092377,
+    "sinkage_cm": 1.0401736944913864,
+    "falls": 1.0
+   }
+  ],
+  "squat_reached_m": 24.475793838500977
+ },
+ "0.05": {
+  "robots": 32,
+  "falls": 5.0,
+  "falls_per_robot_min": 0.234375,
+  "falls_on_cake": 0.0,
+  "segments": [
+   {
+    "segment": "stand",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.5189678631722927,
+    "falls": 0.0
+   },
+   {
+    "segment": "forward 0.4",
+    "speed": 0.9549897313117981,
+    "apex_cm": 3.2550152391195297,
+    "toe_in_share": 0.4001850485801697,
+    "sinkage_cm": 0.9452295489609241,
+    "falls": 0.0
+   },
+   {
+    "segment": "turn 0.6",
+    "speed": 0.789661169052124,
+    "apex_cm": 3.4585654735565186,
+    "toe_in_share": 0.32203391194343567,
+    "sinkage_cm": 1.2822676450014114,
+    "falls": 0.0
+   },
+   {
+    "segment": "backward 0.3",
+    "speed": 0.9514949321746826,
+    "apex_cm": 3.7456531077623367,
+    "toe_in_share": 0.28930917382240295,
+    "sinkage_cm": 1.391538605093956,
+    "falls": 2.0
+   },
+   {
+    "segment": "sideways 0.25",
+    "speed": 0.6388545632362366,
+    "apex_cm": 3.414391726255417,
+    "toe_in_share": 0.36061808466911316,
+    "sinkage_cm": 1.1887205764651299,
+    "falls": 2.0
+   },
+   {
+    "segment": "stand",
+    "speed": NaN,
+    "apex_cm": -1.3208024203777313,
+    "toe_in_share": 1.0,
+    "sinkage_cm": 0.6405247375369072,
+    "falls": 0.0
+   },
+   {
+    "segment": "squat 0.25",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.5967233330011368,
+    "falls": 0.0
+   },
+   {
+    "segment": "squat 0.25 arms wide",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.7049744948744774,
+    "falls": 0.0
+   },
+   {
+    "segment": "stand up",
+    "speed": NaN,
+    "apex_cm": 8.34779143333435,
+    "toe_in_share": 0.25531914830207825,
+    "sinkage_cm": 0.7628647144883871,
+    "falls": 0.0
+   },
+   {
+    "segment": "forward 0.5",
+    "speed": 0.9073827862739563,
+    "apex_cm": 3.7487559020519257,
+    "toe_in_share": 0.3575464189052582,
+    "sinkage_cm": 0.9935728274285793,
+    "falls": 1.0
+   }
+  ],
+  "squat_reached_m": 24.537452697753906
+ },
+ "0.08": {
+  "robots": 32,
+  "falls": 9.0,
+  "falls_per_robot_min": 0.421875,
+  "falls_on_cake": 0.0,
+  "segments": [
+   {
+    "segment": "stand",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.41589708998799324,
+    "falls": 0.0
+   },
+   {
+    "segment": "forward 0.4",
+    "speed": 0.9938924312591553,
+    "apex_cm": 0.9695723652839661,
+    "toe_in_share": 0.7228859663009644,
+    "sinkage_cm": 1.0786226019263268,
+    "falls": 3.0
+   },
+   {
+    "segment": "turn 0.6",
+    "speed": 0.7611446976661682,
+    "apex_cm": 2.282760664820671,
+    "toe_in_share": 0.5268535614013672,
+    "sinkage_cm": 1.4857078902423382,
+    "falls": 0.0
+   },
+   {
+    "segment": "backward 0.3",
+    "speed": 0.8123041391372681,
+    "apex_cm": 2.304796129465103,
+    "toe_in_share": 0.5057119727134705,
+    "sinkage_cm": 1.557625737041235,
+    "falls": 3.0
+   },
+   {
+    "segment": "sideways 0.25",
+    "speed": 1.226153016090393,
+    "apex_cm": 1.7315395176410675,
+    "toe_in_share": 0.6356063485145569,
+    "sinkage_cm": 1.1269032955169678,
+    "falls": 3.0
+   },
+   {
+    "segment": "stand",
+    "speed": NaN,
+    "apex_cm": -2.7859188616275787,
+    "toe_in_share": 1.0,
+    "sinkage_cm": 0.5161688663065434,
+    "falls": 0.0
+   },
+   {
+    "segment": "squat 0.25",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.44144107960164547,
+    "falls": 0.0
+   },
+   {
+    "segment": "squat 0.25 arms wide",
+    "speed": NaN,
+    "apex_cm": 0.0,
+    "toe_in_share": 0.0,
+    "sinkage_cm": 0.4938855767250061,
+    "falls": 0.0
+   },
+   {
+    "segment": "stand up",
+    "speed": NaN,
+    "apex_cm": -2.4866314604878426,
+    "toe_in_share": 0.9509803652763367,
+    "sinkage_cm": 0.6392546463757753,
+    "falls": 0.0
+   },
+   {
+    "segment": "forward 0.5",
+    "speed": 0.9114621877670288,
+    "apex_cm": 1.6127679497003555,
+    "toe_in_share": 0.6473526358604431,
+    "sinkage_cm": 1.2068519368767738,
+    "falls": 0.0
+   }
+  ],
+  "squat_reached_m": 24.661964416503906
+ }
+}

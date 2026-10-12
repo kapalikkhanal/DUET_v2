@@ -19,6 +19,60 @@ https://github.com/bae-air-lab/DUET/raw/main/Robot.mp4
 
 ---
 
+## DUET v2: walking and squatting on poultry-house litter
+
+v2 adapts the DUET locomotion policy to broiler-house floors: soft, loose litter over a hard base, with caked crusts near the drinker lines. Starting from the rough-terrain policy, it adds:
+
+- **The `Unitree-G1-23Dof-Duet-PoultrySurface` task.** It trains in a simulated litter layer (drag on the feet below the litter surface), with:
+  - random litter depth of 0-6 cm per episode;
+  - a lift-first swing (target 9-11 cm above the floor, rising with litter depth) and a penalty on scooping litter;
+  - stronger backward walking (capped at 0.6 m/s);
+  - squats balanced over the feet with the arms forward or wide;
+  - a terrain mix weighted toward flat and litter tiles.
+- **Deeper squats.** The hip-pitch, knee and ankle-pitch joints may use 97% of their range (other joints keep 90%), and the squat floor is 0.22 m. The policy reaches about 0.25 m, against 0.30 m before.
+- **Training stability fixes.** The input normalisers are frozen when a run resumes, training clips raw actions, and a penalty discourages raw actions above 8. Without these, rare huge actions corrupted training or would trip the robot's runaway guard (|action| > 15 for 60 ms).
+- **A simulated broiler-house floor** for testing before field trials (`scripts/poultry_floor/`, documented in [docs/poultry_floor.md](docs/poultry_floor.md)):
+  - an uneven litter surface, dust-bath hollows, a caked strip under the drinker line, feeder pans and loose shavings;
+  - the same floor runs in the Unitree MuJoCo sim-to-sim simulator (real `g1_ctrl` controller) and in mjlab for batch evaluation.
+  - Results: [docs/poultry_floor_results.md](docs/poultry_floor_results.md).
+
+### Checkpoints
+
+| Policy | Files | Notes |
+|---|---|---|
+| **poultry_v3_squat_91500** (recommended) | `checkpoints/poultry_v3_squat_91500/model_91500.pt`, `exported/poultry_v3_squat_91500/` | Deepest squat (about 0.25 m); foot lift about 8 cm on flat ground; walks backward at 104% of command; zero extreme-action events in 6 million simulated steps |
+| poultry_v3_squat_93000 | `checkpoints/poultry_v3_squat_93000/`, `exported/poultry_v3_squat_93000/` | Best litter clearance and foot lift; squat about 1 cm shallower; backward speed 86% |
+| poultry_v2_90000 | `checkpoints/poultry_v2_90000/`, `exported/poultry_v2_90000/` | Before the deeper-squat fine-tune (squat about 0.30 m) |
+| rough_50k | `checkpoints/rough_50k/model_50000.pt` | The rough-terrain policy all poultry runs start from |
+| rough_squatreach_ft_50000 | `checkpoints/rough_squatreach_ft_50000/`, `exported/rough_squatreach_ft_50000/` | Rough policy with arm-reach squats; deployed as `v1_squatreach_ft50000` |
+
+- **Exported policies:** each `exported/<name>/` folder holds `policy.onnx` (71 inputs, 13 outputs) and `deploy_contract.json`. Where the deploy config changed, it also holds `params/deploy.yaml`.
+- **Default deploy folder:** `deploy/robots/g1_23dof/config/policy/velocity/v2_poultry_squat_91500/` holds the recommended policy. `g1_ctrl` loads the last-sorted policy folder, so this one is used by default.
+- **Deploy configs:** all three carry a per-joint target clip and the runaway guard (`safety:`).
+
+### Quick start (v2)
+
+```bash
+# train / fine-tune (single GPU; output goes through the log filter, because MuJoCo Warp prints
+# one "ccd_iterations" warning per contact and would otherwise produce a huge console log)
+bash scripts/finetune_poultry_v2.sh checkpoints/poultry_v3_squat_91500/model_91500.pt my_run 4096 100000
+
+# build the poultry floor for the Unitree MuJoCo simulator, then run sim-to-sim:
+python scripts/poultry_floor/make_poultry_floor.py --out <unitree_mujoco>/unitree_robots/g1
+<unitree_mujoco>/simulate/build/unitree_mujoco -s scene_23dof_poultry.xml   # terminal 1
+deploy/robots/g1_23dof/build/g1_ctrl                                       # terminal 2
+python keyboard.py                                                         # terminal 3
+
+# batch evaluation on the floor, and the per-skill tests (foot lift, backward walking,
+# squats with arm motion, litter depth, extreme actions)
+PYTHONPATH=. python scripts/poultry_floor/eval_poultry_floor.py --policy checkpoints/poultry_v3_squat_91500/model_91500.pt
+PYTHONPATH=. python scripts/eval/action_extremes.py checkpoints/poultry_v3_squat_91500/model_91500.pt
+```
+
+- **Training records** (`training_records/`): progress tables, evaluations, decisions and reports from the v2 runs. This includes the problems found along the way: the normaliser collapse, the extreme-action drift, and contact overflow on fine heightfields.
+
+---
+
 ## Layout
 
 | path | what it is |

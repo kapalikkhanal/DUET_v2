@@ -93,6 +93,13 @@ class DuetPpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
   so a single physics blow-up cannot put an outlier into the value targets.
   ``None`` (default) leaves rewards untouched."""
 
+  freeze_obs_normalizer_on_load: bool = False
+  """Stop updating the actor and critic observation normalizers once a
+  checkpoint is loaded, keeping its statistics. rsl_rl updates them forever,
+  so a few outlier actions can rescale every robot's inputs at once: at 67k
+  of the PoultrySurface run the last-action dims' std grew 35x within 500
+  iterations and the whole batch fell. ``False`` (default) keeps updating."""
+
 
 def unitree_g1_23dof_duet_ppo_runner_cfg(
   max_iterations: int = MAX_ITERATIONS,

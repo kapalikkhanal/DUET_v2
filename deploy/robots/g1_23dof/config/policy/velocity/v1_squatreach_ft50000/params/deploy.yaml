@@ -5,6 +5,13 @@ stiffness: [40.2, 99.1, 40.2, 99.1, 28.5, 28.5, 40.2, 99.1, 40.2, 99.1, 28.5, 28
 damping:   [2.6, 6.3, 2.6, 6.3, 1.8, 1.8, 2.6, 6.3, 2.6, 6.3, 1.8, 1.8, 2.6,
             0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
 default_joint_pos: [-0.1,0,0,0.3,-0.2,0, -0.1,0,0,0.3,-0.2,0,  0,  0.35,0.18,0,0.87,0, 0.35,-0.18,0,0.87,0]
+
+# Runaway-policy guard (State_RLBase): switch to Passive (damping) if any raw
+# policy output stays above max_abs_action for max_abs_action_hold_s. The
+# Rough policy's raw output stays within |7.2| at the 99.99th percentile and
+# never exceeded |9.6| in 716,800 simulated steps under the full trained
+# distribution; a contact glitch produced 25-140. Passive drops the robot, so
+# keep a harness on until this has been seen not to trigger in normal use.
 safety:
   max_abs_action: 15.0
   max_abs_action_hold_s: 0.06
@@ -52,19 +59,28 @@ commands:
   # !! deployed range to be a SUBSET of the trained range, and [0.27, 0.73] sits
   # !! inside the 0.18 and 0.12 floors those were trained on.
   # !! scripts/check_deploy_consistency.py enforces the pairing.
-  # !!
-  # !! CHANGED 2026-10-04: ceiling 0.73 -> 0.78 for rough_seed1_50k_35000
-  # !! (poultry_terrain: HEIGHT_RANGE (0.24, 0.78)). v8 at 0.73 stood visibly
-  # !! crouched on the robot; 0.78 is just under the 0.786 m default pose and is
-  # !! the trained nominal height. Any standstill inside the range is trained
-  # !! (e.g. 0.75); do not raise `range` above 0.78 for this policy.
   base_height:
-    # Resting and max height both 0.78, the top of the trained band
-    # (D-pad Up won't exceed it). Floor 0.24 = the trained squat floor.
+    # v1_squatreach_ft50000 (2026-10-05): this policy was trained with
+    # HEIGHT_RANGE (0.24, 0.78) and a nominal standing height of 0.78, so rest
+    # and the D-pad ceiling sit at 0.78 (v0 kept 0.73 for model_21000, which
+    # stood visibly too low). Floor 0.24 = the trained squat floor; note this
+    # policy stops short of it in practice (~0.30 m at a 0.24 command, sim).
     range: [0.24, 0.78]
     standstill: 0.78
 actions:
   JointPositionAction:
+    # Per-joint clamp on the joint TARGET (offset + scale * action, rad), applied
+    # in joint_actions.h after scaling; the last_action observation still sees
+    # the raw policy output, as in training. Added 2026-10-04 for the Rough
+    # policy (exported/rough_seed1_50k_35000): in sim a contact transient made it
+    # output actions up to ~140, i.e. hip targets near 76 rad. NOT the joint
+    # limits: in normal operation the policy commands targets well past them to
+    # get torque out of the soft PD loop (ankle pitch -1.5..+1.5 against a
+    # -0.80..+0.45 limit). Each bound is 0.5 rad outside the wider of the soft
+    # joint limit and the 0.01-99.99 percentile target measured under the full
+    # trained distribution (pushes, deep squats, full arm motion, flat and
+    # softest/slippery litter; 716,800 samples), so only runaway outputs clip.
+    # Order = joint_ids below.
     clip: [[-3.22, 3.11], [-0.85, 3.29], [-2.98, 2.98], [-0.74, 3.34], [-1.99, 1.97], [-0.98, 0.96],
            [-3.33, 3.11], [-3.29, 0.86], [-2.98, 2.98], [-0.74, 3.33], [-2.02, 1.97], [-0.95, 0.99],
            [-2.86, 2.86]]

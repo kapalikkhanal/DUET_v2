@@ -6,6 +6,16 @@ damping:   [2.6, 6.3, 2.6, 6.3, 1.8, 1.8, 2.6, 6.3, 2.6, 6.3, 1.8, 1.8, 2.6,
             0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
 default_joint_pos: [-0.1,0,0,0.3,-0.2,0, -0.1,0,0,0.3,-0.2,0,  0,  0.35,0.18,0,0.87,0, 0.35,-0.18,0,0.87,0]
 
+# Runaway-policy guard (State_RLBase): switch to Passive (damping) if any raw
+# policy output stays above max_abs_action for max_abs_action_hold_s. The
+# Rough policy's raw output stays within |7.2| at the 99.99th percentile and
+# never exceeded |9.6| in 716,800 simulated steps under the full trained
+# distribution; a contact glitch produced 25-140. Passive drops the robot, so
+# keep a harness on until this has been seen not to trigger in normal use.
+safety:
+  max_abs_action: 15.0
+  max_abs_action_hold_s: 0.06
+
 commands:
   base_velocity:
     # These are the JOYSTICK CLAMPS (see observations.h velocity_commands: the
@@ -62,7 +72,21 @@ commands:
     standstill: 0.78
 actions:
   JointPositionAction:
-    clip: null
+    # Per-joint clamp on the joint TARGET (offset + scale * action, rad), applied
+    # in joint_actions.h after scaling; the last_action observation still sees
+    # the raw policy output, as in training. Added 2026-10-04 for the Rough
+    # policy (exported/rough_seed1_50k_35000): in sim a contact transient made it
+    # output actions up to ~140, i.e. hip targets near 76 rad. NOT the joint
+    # limits: in normal operation the policy commands targets well past them to
+    # get torque out of the soft PD loop (ankle pitch -1.5..+1.5 against a
+    # -0.80..+0.45 limit). Each bound is 0.5 rad outside the wider of the soft
+    # joint limit and the 0.01-99.99 percentile target measured under the full
+    # trained distribution (pushes, deep squats, full arm motion, flat and
+    # softest/slippery litter; 716,800 samples), so only runaway outputs clip.
+    # Order = joint_ids below.
+    clip: [[-3.22, 3.11], [-0.85, 3.29], [-2.98, 2.98], [-0.74, 3.34], [-1.99, 1.97], [-0.98, 0.96],
+           [-3.33, 3.11], [-3.29, 0.86], [-2.98, 2.98], [-0.74, 3.33], [-2.02, 1.97], [-0.95, 0.99],
+           [-2.86, 2.86]]
     joint_names: [.*]
     # Loco-manip carve-out: the RL policy controls ONLY the 13 lower-body joints
     # (12 legs + waist_yaw). The 10 arm joints are driven externally on the

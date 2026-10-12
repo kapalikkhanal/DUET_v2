@@ -93,6 +93,7 @@ class DuetOnPolicyRunner(MjlabOnPolicyRunner):
       algorithm["entropy_coef"] = self.entropy_schedule(0)
 
     self._reward_floor = algorithm.pop("reward_floor", None)
+    self._freeze_obs_normalizer = algorithm.pop("freeze_obs_normalizer_on_load", False)
 
     super().__init__(env, train_cfg, log_dir, device)
 
@@ -146,6 +147,19 @@ class DuetOnPolicyRunner(MjlabOnPolicyRunner):
 
     self.env.step = step_with_reward_floor  # type: ignore[method-assign]
     print(f"[INFO] per-step reward floor {floor} installed.")
+
+  # -- Observation normalizer freeze ------------------------------------------
+
+  def load(self, path: str, *args, **kwargs):
+    infos = super().load(path, *args, **kwargs)
+    if self._freeze_obs_normalizer:
+      for name in ("actor", "critic"):
+        norm = getattr(getattr(self.alg, name, None), "obs_normalizer", None)
+        if norm is not None and hasattr(norm, "until"):
+          # EmpiricalNormalization.update() is a no-op once count >= until.
+          norm.until = int(norm.count)
+          print(f"[INFO] {name} observation normalizer frozen at count {int(norm.count)}.")
+    return infos
 
   # -- Symmetry --------------------------------------------------------------
 

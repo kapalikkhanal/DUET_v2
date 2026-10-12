@@ -90,6 +90,8 @@ class PoultrySurfaceActionCfg(ActionTermCfg):
 
   litter_enabled: bool = True
   max_layer_height: float = 0.04
+  litter_depth_mode: str = "row"
+  litter_depth_range: tuple[float, float] = (0.0, 0.04)
   drag_strength_range: tuple[float, float] = (500.0, 1500.0)
   max_drag_force: float = 150.0
   period: float = 0.6
@@ -104,6 +106,11 @@ class PoultrySurfaceAction(ActionTerm):
     super().__init__(cfg, env)
     if cfg.max_layer_height < 0 or cfg.max_drag_force <= 0:
       raise ValueError("Layer height must be nonnegative and force cap positive")
+    if cfg.litter_depth_mode not in ("row", "random"):
+      raise ValueError("Litter depth mode must be 'row' or 'random'")
+    depth_lo, depth_hi = cfg.litter_depth_range
+    if not 0 <= depth_lo <= depth_hi:
+      raise ValueError("Invalid litter depth range")
     lo, hi = cfg.drag_strength_range
     if not 0 <= lo <= hi:
       raise ValueError("Invalid litter drag strength range")
@@ -131,6 +138,9 @@ class PoultrySurfaceAction(ActionTerm):
     self.toe_index = self.endpoints[..., 0].argmax(-1)
     self._raw_action = torch.zeros((self.num_envs, 0), device=self.device)
     self.strength = torch.empty(self.num_envs, device=self.device).uniform_(lo, hi)
+    self.litter_depth = torch.zeros(self.num_envs, device=self.device)
+    if cfg.litter_depth_mode == "random":
+      self.litter_depth.uniform_(depth_lo, depth_hi)
     self.last_force = torch.zeros((self.num_envs, 2, 3), device=self.device)
     self.last_torque = torch.zeros_like(self.last_force)
     self.peak = torch.zeros((self.num_envs, 2), device=self.device)
@@ -171,6 +181,10 @@ class PoultrySurfaceAction(ActionTerm):
   def reset(self, env_ids=None):
     ids = slice(None) if env_ids is None else env_ids
     self.strength[ids] = torch.empty_like(self.strength[ids]).uniform_(*self.cfg.drag_strength_range)
+    if self.cfg.litter_depth_mode == "random":
+      self.litter_depth[ids] = torch.empty_like(self.litter_depth[ids]).uniform_(
+        *self.cfg.litter_depth_range
+      )
     for buf in (self.peak, self.last_apex, self.last_liftoff_angle, self.was_air,
                 self.complete_swing, self.has_landed, self.last_force, self.last_torque):
       buf[ids] = 0
@@ -195,7 +209,10 @@ class PoultrySurfaceAction(ActionTerm):
     col = col.clamp(0, tg.num_cols - 1)
     valid = inside & self.flat_columns[col]
     soft = inside & self.soft_columns[col]
-    height = self.cfg.max_layer_height * row.clamp(0, tg.num_rows - 1) / max(tg.num_rows - 1, 1)
+    if self.cfg.litter_depth_mode == "random":
+      height = self.litter_depth[:, None, None]
+    else:
+      height = self.cfg.max_layer_height * row.clamp(0, tg.num_rows - 1) / max(tg.num_rows - 1, 1)
     height = height * soft * self.cfg.litter_enabled
     return valid, height
 
@@ -233,11 +250,9 @@ class PoultrySurfaceAction(ActionTerm):
     if key == self._sample_key:
       return self._sample
     points, velocity, rotation, valid, height = self.geometry()
-    # Two references. The stance foot rests on the floor (z = 0 on every valid
-    # tile), so swing height is measured from there: a 9 cm target stays 9 cm
-    # on every litter row, inside the ~10 cm level-foot limit of the ankle and
-    # hip measured by IK. Scooping happens in the loose layer above the floor,
-    # so plow cost and scoop metrics use the litter surface instead.
+    # Apex/lowest remain floor-relative (z = 0 on every valid tile). Rewards
+    # can raise their target with litter depth, within the level-foot limit.
+    # Plow cost and scoop metrics measure clearance above the litter surface.
     clearance = points[..., 2] - height
     lowest = points[..., 2].min(-1).values
     lowest_litter = clearance.min(-1).values
@@ -279,15 +294,29 @@ def _surface(env):
   return env.action_manager.get_term("poultry_surface")
 
 
-def poultry_clearance(env, target_height=0.09):
+def poultry_lift_target(layer, target_height=0.09, above_litter=None,
+                        min_target=0.09, max_target=0.11):
+  """Floor-relative target per foot; legacy constant unless explicitly enabled.
+
+  Within a soft tile both feet use the episode depth. At a tile boundary use
+  the deepest litter under each foot so no sampled sole point is overlooked.
+  """
+  if above_litter is None:
+    return target_height
+  return (layer.amax(dim=-1) + above_litter).clamp(min_target, max_target)
+
+
+def poultry_clearance(env, target_height=0.09, above_litter=None,
+                      min_target=0.09, max_target=0.11):
   """Lowest sole above the stance floor, travel-weighted; moving, valid tiles.
 
   Replaces the old midfoot WORLD-z clearance only in PoultrySurface. No contact
   gate: low travel while the foot still touches is also costly.
   """
   s = _surface(env).sample()
+  target = poultry_lift_target(s["layer"], target_height, above_litter, min_target, max_target)
   speed = s["velocity"][..., :2].norm(dim=-1).mean(-1)
-  return ((s["lowest"] - target_height).abs() * speed * s["active"]).sum(-1)
+  return ((s["lowest"] - target).abs() * speed * s["active"]).sum(-1)
 
 
 def poultry_plow(env, threshold=0.04):
@@ -301,7 +330,8 @@ def poultry_plow(env, threshold=0.04):
   return (cost.mean(-1) * s["active"]).sum(-1)
 
 
-def poultry_swing_height(env, target_height=0.09):
+def poultry_swing_height(env, target_height=0.09, above_litter=None,
+                         min_target=0.09, max_target=0.11):
   """Lowest-sole peak above the stance floor, evaluated once on completed landing.
 
   Normalize by target and by policy dt so the configured weight represents a
@@ -309,8 +339,46 @@ def poultry_swing_height(env, target_height=0.09):
   """
   state = _surface(env)
   s = state.sample()
-  error = (state.last_apex / target_height - 1).square().clamp_max(4)
+  target = poultry_lift_target(s["layer"], target_height, above_litter, min_target, max_target)
+  error = (state.last_apex / target - 1).square().clamp_max(4)
   return (error * s["landing"]).sum(-1) / env.step_dt
+
+
+def action_excess_l2(env, threshold=8.0):
+  """Squared raw policy output beyond ``threshold``, summed over joints.
+
+  Nothing else penalizes a target pushed past a joint limit the joint already
+  sits at, so in rare states the raw output drifts upward (ankle pitch: raw 15
+  is ~6.6 rad past default on a ~1.4 rad joint). The deploy runaway guard goes
+  passive above 15 for 60 ms. Healthy checkpoints exceed 10 only ~1-8 times
+  per million steps, so normal behaviour is untouched.
+  """
+  return (env.action_manager.action.abs() - threshold).clamp_min(0).square().sum(-1)
+
+
+def joint_pos_limits_widened(env, widen_joints=(".*_hip_pitch_joint", ".*_knee_joint", ".*_ankle_pitch_joint"),
+                             factor=0.97, asset_cfg=SceneEntityCfg("robot")):
+  """mjlab ``joint_pos_limits`` with a wider soft band on the squat joints only.
+
+  The entity's soft limits (90% of range) still bound the arm targets and the
+  reset sampling; only this penalty uses ``factor`` for ``widen_joints``. At
+  90% the hip pitch and ankle pitch hold a flat-footed squat at 0.29 m; at 97%
+  the kinematic floor is 0.22 m.
+  """
+  import re
+  asset = env.scene[asset_cfg.name]
+  cache = getattr(env, "_widened_limit_ids", None)
+  if cache is None:
+    ids = [i for i, n in enumerate(asset.joint_names) if any(re.fullmatch(p, n) for p in widen_joints)]
+    cache = env._widened_limit_ids = torch.tensor(ids, device=env.device, dtype=torch.long)
+  soft = asset.data.soft_joint_pos_limits.clone()
+  hard = asset.data.joint_pos_limits[:, cache]
+  mid, half = hard.mean(-1), (hard[..., 1] - hard[..., 0]) / 2
+  soft[:, cache, 0] = mid - factor * half
+  soft[:, cache, 1] = mid + factor * half
+  q = asset.data.joint_pos
+  out = -(q - soft[..., 0]).clip(max=0.0) + (q - soft[..., 1]).clip(min=0.0)
+  return out.sum(dim=1)
 
 
 def poultry_foot_level(env, threshold=0.05, deadband_deg=5.0):

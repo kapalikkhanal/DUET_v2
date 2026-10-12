@@ -6,6 +6,7 @@ runs/
 MUJOCO_LOG.TXT
 *.pt
 !exported/model_15500.pt
+!checkpoints/**/*.pt
 
 # build artefacts
 deploy/robots/*/build/
